@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script src="/theme-init.js"></script>
+  <title>SecServer · Ubuntu Hardening Console</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navigazione principale">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">S</div>
+        <div class="brand-text">
+          <strong>SecServer</strong>
+          <span id="sidebar-host">ubuntu-vps</span>
+        </div>
+        <span class="pill pill-info" id="mode-badge" hidden>DEMO</span>
+      </div>
+
+      <nav class="nav-list" role="tablist" aria-label="Sezioni audit">
+        <button type="button" class="nav-item is-active" role="tab" aria-selected="true" data-view="overview">
+          <span>Panoramica</span>
+        </button>
+        <button type="button" class="nav-item" role="tab" aria-selected="false" data-view="checks">
+          <span>Controlli CIS</span>
+          <span class="nav-count" id="nav-count-issues">0</span>
+        </button>
+        <button type="button" class="nav-item" role="tab" aria-selected="false" data-view="logs">
+          <span>Log &amp; Minacce</span>
+          <span class="nav-count" id="nav-count-logs">0</span>
+        </button>
+        <button type="button" class="nav-item" role="tab" aria-selected="false" data-view="ports">
+          <span>Porte &amp; Servizi</span>
+          <span class="nav-count" id="nav-count-ports">0</span>
+        </button>
+        <button type="button" class="nav-item" role="tab" aria-selected="false" data-view="history">
+          <span>Storico</span>
+          <span class="nav-count" id="nav-count-history">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button type="button" id="btn-rescan" class="btn btn-primary btn-full">Nuova scansione</button>
+        <div class="export-row">
+          <button type="button" id="btn-export-json" class="btn btn-secondary btn-sm">JSON</button>
+          <button type="button" id="btn-export-html" class="btn btn-secondary btn-sm">Report HTML</button>
+        </div>
+        <button type="button" id="btn-theme-toggle" class="btn btn-ghost btn-full theme-toggle">
+          <span class="theme-opt theme-opt-to-dark">Tema scuro</span>
+          <span class="theme-opt theme-opt-to-light">Tema chiaro</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="compact-header">
+        <div>
+          <h1 id="view-title">Panoramica Sicurezza</h1>
+          <p class="meta-line" id="host-meta">Caricamento informazioni sistema…</p>
+        </div>
+        <div class="header-right">
+          <span class="meta-timestamp" id="generated-at">--</span>
+        </div>
+      </header>
+
+      <section id="alert-banner" class="alert-banner" role="status" hidden></section>
+
+      <!-- VIEW 1: PANORAMICA -->
+      <section class="view-panel" id="view-overview" data-view-panel="overview">
+        <div class="overview-top">
+          <article class="card score-widget">
+            <div class="ring-wrap" aria-hidden="true">
+              <svg viewBox="0 0 80 80" class="score-ring">
+                <circle class="ring-bg" cx="40" cy="40" r="34"></circle>
+                <circle class="ring-fg" id="score-ring-fg" cx="40" cy="40" r="34"></circle>
+              </svg>
+              <div class="ring-label">
+                <strong id="score-value">--</strong>
+                <span>/100</span>
+              </div>
+            </div>
+            <div class="score-meta">
+              <span class="label-xs">Indice Hardening</span>
+              <p class="score-caption" id="score-caption">Valutazione configurazioni CIS &amp; Lynis</p>
+              <div class="mini-stats">
+                <span class="pill pill-pass"><b id="count-pass">0</b> OK</span>
+                <span class="pill pill-warn"><b id="count-warn">0</b> Avvisi</span>
+                <span class="pill pill-fail"><b id="count-fail">0</b> Critici</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card kpi-strip">
+            <div class="kpi-item">
+              <span class="label-xs">SSH Falliti</span>
+              <strong id="ov-failed-ssh">0</strong>
+            </div>
+            <div class="kpi-item">
+              <span class="label-xs">Blocchi UFW</span>
+              <strong id="ov-ufw-blocks">0</strong>
+            </div>
+            <div class="kpi-item">
+              <span class="label-xs">Porte Pubbliche</span>
+              <strong id="ov-public-ports">0</strong>
+            </div>
+            <div class="kpi-item">
+              <span class="label-xs">Accessi SSH OK</span>
+              <strong id="ov-accepted-ssh">0</strong>
+            </div>
+          </article>
+        </div>
+
+        <div class="overview-grid">
+          <article class="card">
+            <div class="card-head">
+              <h2>Stato per Categoria</h2>
+            </div>
+            <div id="category-bars" class="category-bars"></div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2>Priorità di Intervento</h2>
+              <button type="button" class="link-btn" id="btn-goto-checks">Vedi tutti →</button>
+            </div>
+            <ul id="priority-list" class="priority-list"></ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- VIEW 2: CONTROLLI CIS/LYNIS -->
+      <section class="view-panel" id="view-checks" data-view-panel="checks" hidden>
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <label class="sr-only" for="filter-status">Stato</label>
+            <select id="filter-status">
+              <option value="all">Tutti gli stati</option>
+              <option value="fail">Solo critici</option>
+              <option value="warn">Solo avvisi</option>
+              <option value="pass">Solo OK</option>
+              <option value="info">Solo info</option>
+            </select>
+            <label class="sr-only" for="filter-category">Categoria</label>
+            <select id="filter-category">
+              <option value="all">Tutte le categorie</option>
+            </select>
+          </div>
+          <label class="sr-only" for="filter-search">Cerca controllo</label>
+          <input type="search" id="filter-search" placeholder="Filtra per controllo, CIS/Lynis o rimedio…">
+        </div>
+
+        <div tabindex="0" role="region" aria-labelledby="checks-table-caption" class="table-wrapper">
+          <table class="checks-table">
+            <caption id="checks-table-caption" class="sr-only">Risultati controlli CIS e Lynis</caption>
+            <thead>
+              <tr>
+                <th scope="col">Controllo</th>
+                <th scope="col">Benchmark</th>
+                <th scope="col">Stato</th>
+                <th scope="col">Severità</th>
+                <th scope="col">Dettagli &amp; Rimedio</th>
+              </tr>
+            </thead>
+            <tbody id="checks-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 3: LOG & MINACCE -->
+      <section class="view-panel" id="view-logs" data-view-panel="logs" hidden>
+        <p class="section-note" id="log-sources">Sorgenti analizzate: --</p>
+        <div id="log-warnings" class="info-banner" hidden></div>
+
+        <div class="kpi-row-5">
+          <div class="card kpi-mini">
+            <span class="label-xs">SSH Password Errate</span>
+            <strong id="log-failed-ssh">0</strong>
+          </div>
+          <div class="card kpi-mini">
+            <span class="label-xs">Utenti Inesistenti</span>
+            <strong id="log-invalid-users">0</strong>
+          </div>
+          <div class="card kpi-mini">
+            <span class="label-xs">Accessi SSH OK</span>
+            <strong id="log-accepted-ssh">0</strong>
+          </div>
+          <div class="card kpi-mini">
+            <span class="label-xs">Comandi sudo</span>
+            <strong id="log-sudo">0</strong>
+          </div>
+          <div class="card kpi-mini">
+            <span class="label-xs">Blocchi UFW</span>
+            <strong id="log-ufw-blocks">0</strong>
+          </div>
+        </div>
+
+        <div class="two-col-grid">
+          <div>
+            <h2 class="sub-h2" id="top-ips-caption">Top IP con tentativi falliti</h2>
+            <div tabindex="0" role="region" aria-labelledby="top-ips-caption" class="table-wrapper compact-table">
+              <table class="ips-table">
+                <caption class="sr-only">Top IP con tentativi SSH falliti</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Indirizzo IP</th>
+                    <th scope="col">Tentativi</th>
+                  </tr>
+                </thead>
+                <tbody id="top-ips-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="sub-h2" id="top-ports-caption">Top porte bloccate da UFW</h2>
+            <div tabindex="0" role="region" aria-labelledby="top-ports-caption" class="table-wrapper compact-table">
+              <table class="blocked-ports-table">
+                <caption class="sr-only">Top porte bloccate dal firewall UFW</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Porta / Proto</th>
+                    <th scope="col">Blocchi</th>
+                  </tr>
+                </thead>
+                <tbody id="top-blocked-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="sub-h2 mt-1" id="recent-events-caption">Eventi recenti rilevanti</h2>
+        <div tabindex="0" role="region" aria-labelledby="recent-events-caption" class="table-wrapper">
+          <table class="events-table">
+            <caption class="sr-only">Eventi recenti estratti dai log di sistema</caption>
+            <thead>
+              <tr>
+                <th scope="col">Timestamp</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Sorgente</th>
+                <th scope="col">Descrizione</th>
+              </tr>
+            </thead>
+            <tbody id="events-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 4: PORTE & SERVIZI -->
+      <section class="view-panel" id="view-ports" data-view-panel="ports" hidden>
+        <p class="section-note">Socket TCP/UDP in ascolto rilevati localmente via <code>ss</code>. I servizi interni (DB, cache, pannelli admin) dovrebbero legarsi a <code>127.0.0.1</code> o all'IP della VPN.</p>
+        <div tabindex="0" role="region" aria-labelledby="ports-table-caption" class="table-wrapper">
+          <table class="ports-table">
+            <caption id="ports-table-caption" class="sr-only">Porte e processi in ascolto locale</caption>
+            <thead>
+              <tr>
+                <th scope="col">Porta</th>
+                <th scope="col">Protocollo</th>
+                <th scope="col">Indirizzo Bind</th>
+                <th scope="col">Processo</th>
+                <th scope="col">Esposizione</th>
+              </tr>
+            </thead>
+            <tbody id="ports-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 5: STORICO SCANSIONI -->
+      <section class="view-panel" id="view-history" data-view-panel="history" hidden>
+        <p class="section-note">Scansioni salvate localmente in SQLite (<code>data/audit_history.db</code>). Clicca su una scansione passata per caricarla nella dashboard.</p>
+        <div tabindex="0" role="region" aria-labelledby="history-table-caption" class="table-wrapper">
+          <table class="history-table">
+            <caption id="history-table-caption" class="sr-only">Storico scansioni di sicurezza salvate</caption>
+            <thead>
+              <tr>
+                <th scope="col">Data / Ora</th>
+                <th scope="col">Host</th>
+                <th scope="col">Punteggio</th>
+                <th scope="col">Esiti (OK / Avvisi / Critici)</th>
+                <th scope="col">Azione</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
