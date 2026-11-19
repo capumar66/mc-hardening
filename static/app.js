@@ -7,9 +7,16 @@
   const VIEW_TITLES = {
     overview: "Panoramica Sicurezza",
     checks: "Controlli CIS & Lynis",
+    tools: "Tool di Sicurezza Best Practice",
     logs: "Log & Minacce",
     ports: "Porte & Servizi in Ascolto",
     history: "Storico Scansioni",
+  };
+
+  const TOOL_STATUS_LABELS = {
+    ok: { text: "Installato", cls: "pill-pass" },
+    inactive: { text: "Inattivo", cls: "pill-warn" },
+    missing: { text: "Da installare", cls: "pill-fail" },
   };
 
   const STATUS_LABELS = { pass: "OK", warn: "Avviso", fail: "Critico", info: "Info" };
@@ -634,11 +641,92 @@
     }
   }
 
+  function renderTools() {
+    const tools = (currentReport && currentReport.security_tools) || [];
+    const okCount = tools.filter((t) => t.status === "ok").length;
+    const missingCount = tools.filter((t) => t.status === "missing").length;
+    const inactiveCount = tools.filter((t) => t.status === "inactive").length;
+    const highMissing = tools.filter((t) => t.status !== "ok" && t.priority === "high").length;
+
+    document.getElementById("tools-ok").textContent = String(okCount);
+    document.getElementById("tools-missing").textContent = String(missingCount);
+    document.getElementById("tools-inactive").textContent = String(inactiveCount);
+    document.getElementById("tools-high-missing").textContent = String(highMissing);
+    document.getElementById("nav-count-tools").textContent = String(missingCount + inactiveCount);
+
+    const statusFilter = document.getElementById("filter-tool-status").value;
+    const prioFilter = document.getElementById("filter-tool-priority").value;
+    const q = document.getElementById("filter-tool-search").value.trim().toLowerCase();
+
+    const filtered = tools.filter((t) => {
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (prioFilter !== "all" && t.priority !== prioFilter) return false;
+      if (q) {
+        const hay = `${t.name} ${t.category} ${t.source} ${t.description}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const tbody = document.getElementById("tools-tbody");
+    if (filtered.length === 0) {
+      renderEmptyRow(tbody, 5, "Nessun tool corrisponde ai filtri selezionati.");
+      return;
+    }
+
+    clearNode(tbody);
+    for (const tool of filtered) {
+      const tr = el("tr");
+
+      const th = el("th");
+      th.scope = "row";
+      th.appendChild(document.createTextNode(tool.name));
+      th.appendChild(el("span", "check-cat", tool.category));
+      tr.appendChild(th);
+
+      const tdStatus = el("td");
+      const meta = TOOL_STATUS_LABELS[tool.status] || { text: tool.status, cls: "pill-info" };
+      tdStatus.appendChild(el("span", `pill ${meta.cls}`, meta.text));
+      tr.appendChild(tdStatus);
+
+      tr.appendChild(el("td", null, SEVERITY_LABELS[tool.priority] || tool.priority));
+
+      const tdSrc = el("td");
+      tdSrc.appendChild(el("span", "pill pill-bench", tool.source));
+      tr.appendChild(tdSrc);
+
+      const tdDesc = el("td");
+      tdDesc.appendChild(el("div", null, tool.description));
+
+      if (tool.status !== "ok" && tool.install_cmd) {
+        const cmdRow = el("div", "cmd-row");
+        cmdRow.appendChild(el("code", null, tool.install_cmd));
+        const copyBtn = el("button", "copy-btn", "Copia");
+        copyBtn.type = "button";
+        copyBtn.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(tool.install_cmd);
+            copyBtn.textContent = "Copiato!";
+            setTimeout(() => { copyBtn.textContent = "Copia"; }, 1400);
+          } catch {
+            copyBtn.textContent = "Seleziona";
+          }
+        });
+        cmdRow.appendChild(copyBtn);
+        tdDesc.appendChild(cmdRow);
+      }
+
+      tr.appendChild(tdDesc);
+      tbody.appendChild(tr);
+    }
+  }
+
   function renderAll(report) {
     currentReport = report;
     renderOverview(report);
     populateCategoryFilter(report.checks || []);
     renderChecksTable();
+    renderTools();
     renderLogs(report.logs || {});
     renderPorts(report.listening_ports || []);
   }
@@ -767,6 +855,9 @@
     document.getElementById("filter-status").addEventListener("change", renderChecksTable);
     document.getElementById("filter-category").addEventListener("change", renderChecksTable);
     document.getElementById("filter-search").addEventListener("input", renderChecksTable);
+    document.getElementById("filter-tool-status").addEventListener("change", renderTools);
+    document.getElementById("filter-tool-priority").addEventListener("change", renderTools);
+    document.getElementById("filter-tool-search").addEventListener("input", renderTools);
     document.getElementById("filter-event-type").addEventListener("change", renderRecentEvents);
     document.getElementById("filter-event-search").addEventListener("input", renderRecentEvents);
 

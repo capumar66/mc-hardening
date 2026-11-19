@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from .history import HistoryStore
 from .models import AuditReport, CheckResult, ListeningPort, LogSummary, compute_score
+from .tools import build_demo_security_tools
 
 
 def build_demo_report(generated_at: str | None = None) -> AuditReport:
@@ -250,6 +251,7 @@ def build_demo_report(generated_at: str | None = None) -> AuditReport:
         checks=checks,
         listening_ports=ports,
         logs=logs,
+        security_tools=build_demo_security_tools(),
     )
 
 

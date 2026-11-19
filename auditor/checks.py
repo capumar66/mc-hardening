@@ -15,6 +15,7 @@ import subprocess
 
 from .logs import analyze_system_logs
 from .models import AuditReport, CheckResult, ListeningPort, compute_score
+from .tools import check_security_tools
 
 
 def _run_cmd(cmd: list[str], timeout: int = 5) -> tuple[int, str, str]:
@@ -956,6 +957,7 @@ def run_audit() -> AuditReport:
 
     ports = collect_listening_ports() if is_linux else []
     logs = analyze_system_logs() if is_linux else analyze_system_logs(max_lines=100)
+    tools = check_security_tools()
 
     if is_linux:
         public_ports = [p for p in ports if p.exposure == "public"]
@@ -991,4 +993,5 @@ def run_audit() -> AuditReport:
         checks=checks,
         listening_ports=ports,
         logs=logs,
+        security_tools=tools,
     )

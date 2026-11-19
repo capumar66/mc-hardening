@@ -28,6 +28,10 @@
           <span>Controlli CIS</span>
           <span class="nav-count" id="nav-count-issues">0</span>
         </button>
+        <button type="button" class="nav-item" role="tab" aria-selected="false" data-view="tools">
+          <span>Tool Sicurezza</span>
+          <span class="nav-count" id="nav-count-tools">0</span>
+        </button>
         <button type="button" class="nav-item" role="tab" aria-selected="false" data-view="logs">
           <span>Log &amp; Minacce</span>
           <span class="nav-count" id="nav-count-logs">0</span>
@@ -165,6 +169,67 @@
               </tr>
             </thead>
             <tbody id="checks-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- VIEW 2B: TOOL SICUREZZA -->
+      <section class="view-panel" id="view-tools" data-view-panel="tools" hidden>
+        <p class="section-note">Verifica in sola lettura dei principali tool di sicurezza consigliati da <strong>CIS Benchmark</strong>, <strong>Canonical Ubuntu Security</strong> e <strong>NIST</strong>. Nessun pacchetto viene installato automaticamente: usa il pulsante Copia per eseguire manualmente i comandi sul server.</p>
+
+        <div class="kpi-row-5">
+          <div class="card kpi-mini">
+            <span class="label-xs">Installati &amp; Attivi</span>
+            <strong id="tools-ok">0</strong>
+          </div>
+          <div class="card kpi-mini">
+            <span class="label-xs">Da Installare</span>
+            <strong id="tools-missing">0</strong>
+          </div>
+          <div class="card kpi-mini">
+            <span class="label-xs">Installati ma Inattivi</span>
+            <strong id="tools-inactive">0</strong>
+          </div>
+          <div class="card kpi-mini">
+            <span class="label-xs">Priorità Alta Mancanti</span>
+            <strong id="tools-high-missing">0</strong>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-group">
+            <label class="sr-only" for="filter-tool-status">Stato tool</label>
+            <select id="filter-tool-status">
+              <option value="all">Tutti gli stati</option>
+              <option value="missing">Da installare</option>
+              <option value="inactive">Installati ma inattivi</option>
+              <option value="ok">Installati e attivi</option>
+            </select>
+            <label class="sr-only" for="filter-tool-priority">Priorità tool</label>
+            <select id="filter-tool-priority">
+              <option value="all">Tutte le priorità</option>
+              <option value="high">Solo priorità alta</option>
+              <option value="medium">Solo priorità media</option>
+              <option value="low">Solo priorità bassa</option>
+            </select>
+          </div>
+          <label class="sr-only" for="filter-tool-search">Cerca tool</label>
+          <input type="search" id="filter-tool-search" placeholder="Cerca tool, categoria o standard…">
+        </div>
+
+        <div tabindex="0" role="region" aria-labelledby="tools-table-caption" class="table-wrapper">
+          <table class="tools-table">
+            <caption id="tools-table-caption" class="sr-only">Tool di sicurezza best practice per Ubuntu Server</caption>
+            <thead>
+              <tr>
+                <th scope="col">Tool</th>
+                <th scope="col">Stato</th>
+                <th scope="col">Priorità</th>
+                <th scope="col">Fonte Best Practice</th>
+                <th scope="col">Scopo &amp; Comando di installazione</th>
+              </tr>
+            </thead>
+            <tbody id="tools-tbody"></tbody>
           </table>
         </div>
       </section>

@@ -88,6 +88,9 @@ class TestScoringAndBindClassification(unittest.TestCase):
         self.assertTrue(report.demo_mode)
         self.assertGreater(len(report.checks), 5)
         self.assertGreater(report.score, 0)
+        self.assertGreaterEqual(len(report.security_tools), 10)
+        self.assertTrue(any(t.status == "missing" for t in report.security_tools))
+        self.assertTrue(all(t.install_cmd for t in report.security_tools))
 
 
 class TestHistoryStore(unittest.TestCase):

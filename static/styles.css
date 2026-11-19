@@ -973,6 +973,12 @@ tbody tr:last-child td {
   .history-table td:nth-child(3)::before { content: var(--label-3) ": "; }
   .history-table td:nth-child(4)::before { content: var(--label-4) ": "; }
   .history-table td:nth-child(5)::before { content: var(--label-5) ": "; }
+
+  .tools-table { --label-2: "Stato"; --label-3: "Priorità"; --label-4: "Fonte"; --label-5: "Scopo & Installazione"; }
+  .tools-table td:nth-child(2)::before { content: var(--label-2) ": "; }
+  .tools-table td:nth-child(3)::before { content: var(--label-3) ": "; }
+  .tools-table td:nth-child(4)::before { content: var(--label-4) ": "; }
+  .tools-table td:nth-child(5)::before { content: var(--label-5) ": "; display: block; margin-block-end: 0.15rem; }
 }
 
 /* Collapse sidebar on narrow viewports */

@@ -44,6 +44,25 @@ class ListeningPort:
 
 
 @dataclass
+class SecurityTool:
+    """Best-practice security tool installation and service status."""
+
+    id: str
+    name: str
+    category: str
+    priority: str  # "high" | "medium" | "low"
+    installed: bool
+    active: bool | None
+    status: str  # "ok" | "inactive" | "missing"
+    source: str
+    description: str
+    install_cmd: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class LogSummary:
     """Aggregated findings from auth and firewall logs."""
 
@@ -79,6 +98,7 @@ class AuditReport:
     checks: list[CheckResult]
     listening_ports: list[ListeningPort]
     logs: LogSummary
+    security_tools: list[SecurityTool] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -94,6 +114,7 @@ class AuditReport:
             "checks": [c.to_dict() for c in self.checks],
             "listening_ports": [p.to_dict() for p in self.listening_ports],
             "logs": self.logs.to_dict(),
+            "security_tools": [t.to_dict() for t in self.security_tools],
         }
 
 
