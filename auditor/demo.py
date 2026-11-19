@@ -29,8 +29,8 @@ def build_demo_report(generated_at: str | None = None) -> AuditReport:
             severity="high",
             benchmark="CIS 5.2.10",
             details="PasswordAuthentication è 'yes'. Il server è esposto a brute-force sulle password.",
-            remediation="Configura le chiavi SSH, poi disabilita PasswordAuthentication e KbdInteractiveAuthentication.",
-            remediation_cmd="printf 'PasswordAuthentication no\\nKbdInteractiveAuthentication no\\n' | sudo tee -a /etc/ssh/sshd_config.d/99-hardening.conf && sudo sshd -t && sudo systemctl reload ssh",
+            remediation="Configura le chiavi SSH, poi disabilita PasswordAuthentication in /etc/ssh/sshd_config.d/00-hardening.conf.",
+            remediation_cmd="printf 'PasswordAuthentication no\\nKbdInteractiveAuthentication no\\n' | sudo tee -a /etc/ssh/sshd_config.d/00-hardening.conf && sudo sshd -t && (sudo systemctl reload ssh || sudo systemctl restart ssh)",
             evidence="sshd -T: PasswordAuthentication yes",
         ),
         CheckResult(
@@ -41,8 +41,8 @@ def build_demo_report(generated_at: str | None = None) -> AuditReport:
             severity="medium",
             benchmark="CIS 5.2.5",
             details="MaxAuthTries è 6 (consigliato <= 4).",
-            remediation="Imposta 'MaxAuthTries 3' per limitare tentativi per connessione.",
-            remediation_cmd="echo 'MaxAuthTries 3' | sudo tee -a /etc/ssh/sshd_config.d/99-hardening.conf && sudo sshd -t && sudo systemctl reload ssh",
+            remediation="Imposta 'MaxAuthTries 3' in /etc/ssh/sshd_config.d/00-hardening.conf (letto per primo da OpenSSH).",
+            remediation_cmd="echo 'MaxAuthTries 3' | sudo tee -a /etc/ssh/sshd_config.d/00-hardening.conf && sudo sshd -t && (sudo systemctl reload ssh || sudo systemctl restart ssh)",
             evidence="sshd -T: MaxAuthTries 6",
         ),
         CheckResult(

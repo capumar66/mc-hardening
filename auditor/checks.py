@@ -144,8 +144,8 @@ def check_ssh_hardening() -> list[CheckResult]:
                 severity="high",
                 benchmark="CIS 5.2.8",
                 details=f"PermitRootLogin è '{root_login}'. È preferibile disabilitarlo completamente.",
-                remediation="Imposta 'PermitRootLogin no' in /etc/ssh/sshd_config.d/99-hardening.conf e ricarica sshd.",
-                remediation_cmd="echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config.d/99-hardening.conf && sudo sshd -t && sudo systemctl reload ssh",
+                remediation="Imposta 'PermitRootLogin no' in /etc/ssh/sshd_config.d/00-hardening.conf (letto per primo da OpenSSH) e ricarica ssh.",
+                remediation_cmd="echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config.d/00-hardening.conf && sudo sshd -t && (sudo systemctl reload ssh || sudo systemctl restart ssh)",
                 evidence=f"{source}: PermitRootLogin {root_login}",
             )
         )
@@ -159,8 +159,8 @@ def check_ssh_hardening() -> list[CheckResult]:
                 severity="high",
                 benchmark="CIS 5.2.8",
                 details=f"PermitRootLogin è '{root_login}'. Espone l'account root a tentativi di accesso diretto.",
-                remediation="Disabilita l'accesso root diretto e usa un utente non-root con sudo.",
-                remediation_cmd="echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config.d/99-hardening.conf && sudo sshd -t && sudo systemctl reload ssh",
+                remediation="Disabilita l'accesso root diretto in /etc/ssh/sshd_config.d/00-hardening.conf e usa un utente non-root con sudo.",
+                remediation_cmd="echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config.d/00-hardening.conf && sudo sshd -t && (sudo systemctl reload ssh || sudo systemctl restart ssh)",
                 evidence=f"{source}: PermitRootLogin {root_login}",
             )
         )
@@ -183,8 +183,8 @@ def check_ssh_hardening() -> list[CheckResult]:
                 if pwd_auth == "no"
                 else f"PasswordAuthentication è '{pwd_auth}'. Il server è esposto a brute-force sulle password."
             ),
-            remediation="" if pwd_auth == "no" else "Configura le chiavi SSH, poi disabilita PasswordAuthentication e KbdInteractiveAuthentication.",
-            remediation_cmd="" if pwd_auth == "no" else "printf 'PasswordAuthentication no\\nKbdInteractiveAuthentication no\\n' | sudo tee -a /etc/ssh/sshd_config.d/99-hardening.conf && sudo sshd -t && sudo systemctl reload ssh",
+            remediation="" if pwd_auth == "no" else "Configura le chiavi SSH, poi disabilita PasswordAuthentication in /etc/ssh/sshd_config.d/00-hardening.conf.",
+            remediation_cmd="" if pwd_auth == "no" else "printf 'PasswordAuthentication no\\nKbdInteractiveAuthentication no\\n' | sudo tee -a /etc/ssh/sshd_config.d/00-hardening.conf && sudo sshd -t && (sudo systemctl reload ssh || sudo systemctl restart ssh)",
             evidence=f"{source}: PasswordAuthentication {pwd_auth}",
         )
     )
@@ -218,8 +218,8 @@ def check_ssh_hardening() -> list[CheckResult]:
             severity="medium",
             benchmark="CIS 5.2.5",
             details=f"MaxAuthTries è {max_tries} (consigliato <= 4).",
-            remediation="" if max_tries <= 4 else "Riduci MaxAuthTries a 3 per limitare tentativi per connessione.",
-            remediation_cmd="" if max_tries <= 4 else "echo 'MaxAuthTries 3' | sudo tee -a /etc/ssh/sshd_config.d/99-hardening.conf && sudo sshd -t && sudo systemctl reload ssh",
+            remediation="" if max_tries <= 4 else "Riduci MaxAuthTries a 3 in /etc/ssh/sshd_config.d/00-hardening.conf (letto per primo da OpenSSH).",
+            remediation_cmd="" if max_tries <= 4 else "echo 'MaxAuthTries 3' | sudo tee -a /etc/ssh/sshd_config.d/00-hardening.conf && sudo sshd -t && (sudo systemctl reload ssh || sudo systemctl restart ssh)",
             evidence=f"{source}: MaxAuthTries {max_tries_raw}",
         )
     )
@@ -250,7 +250,7 @@ def check_ssh_hardening() -> list[CheckResult]:
             severity="low",
             benchmark="CIS 5.2.4",
             details=f"LogLevel è '{loglevel}' (consigliato VERBOSE o INFO per tracciare fingerprint chiavi).",
-            remediation="" if log_ok else "Imposta 'LogLevel VERBOSE' in /etc/ssh/sshd_config.d/99-hardening.conf.",
+            remediation="" if log_ok else "Imposta 'LogLevel VERBOSE' in /etc/ssh/sshd_config.d/00-hardening.conf.",
             evidence=f"{source}: LogLevel {loglevel}",
         )
     )
