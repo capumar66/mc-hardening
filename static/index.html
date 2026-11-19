@@ -231,7 +231,24 @@
           </div>
         </div>
 
-        <h2 class="sub-h2 mt-1" id="recent-events-caption">Eventi recenti rilevanti</h2>
+        <div class="events-header mt-1">
+          <div>
+            <h2 class="sub-h2" id="recent-events-caption">Eventi recenti rilevanti</h2>
+            <span class="meta-timestamp" id="events-count-label">0 eventi</span>
+          </div>
+          <div class="toolbar-group">
+            <label class="sr-only" for="filter-event-type">Filtra per tipo evento</label>
+            <select id="filter-event-type">
+              <option value="all">Tutti i tipi</option>
+              <option value="ssh_failed">SSH Falliti</option>
+              <option value="ssh_invalid_user">Utenti Inesistenti</option>
+              <option value="ssh_accepted">SSH Riusciti</option>
+              <option value="sudo">Comandi Sudo</option>
+            </select>
+            <label class="sr-only" for="filter-event-search">Cerca negli eventi</label>
+            <input type="search" id="filter-event-search" placeholder="Filtra per IP, utente o comando…">
+          </div>
+        </div>
         <div tabindex="0" role="region" aria-labelledby="recent-events-caption" class="table-wrapper">
           <table class="events-table">
             <caption class="sr-only">Eventi recenti estratti dai log di sistema</caption>

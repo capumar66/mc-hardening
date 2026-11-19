@@ -650,7 +650,9 @@ body {
 }
 
 .toolbar select,
-.toolbar input {
+.toolbar input,
+.events-header select,
+.events-header input {
   font: inherit;
   font-size: 0.82rem;
   padding: 0.4rem 0.65rem;
@@ -658,6 +660,112 @@ body {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
+}
+
+.events-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-block-end: 0.5rem;
+}
+
+.events-header .sub-h2 {
+  margin: 0;
+}
+
+.events-header input[type="search"] {
+  min-inline-size: 200px;
+}
+
+/* CIS Toggletip button & interest-triggered popover */
+.check-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.tip-trigger {
+  flex-shrink: 0;
+  inline-size: 18px;
+  block-size: 18px;
+  margin-block-start: 1px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-grid;
+  place-items: center;
+  cursor: help;
+  padding: 0;
+  --interest-delay-start: 0.15s;
+  interest-delay-start: var(--interest-delay-start);
+  --interest-delay-end: 0.15s;
+  interest-delay-end: var(--interest-delay-end);
+}
+
+.tip-trigger:hover,
+.tip-trigger:focus-visible,
+.tip-trigger:is(:interest-source, .interest-source) {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.table-wrapper:has([interestfor]:is(:interest-source, .interest-source)) [interestfor] {
+  --interest-delay-start: 0s;
+}
+
+[popover].cis-tip {
+  max-inline-size: min(360px, 90vw);
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: start;
+}
+
+@supports (position-area: block-end) {
+  [popover].cis-tip {
+    inset: auto;
+    margin: 0.35rem 0 0;
+    position-area: block-end span-inline-end;
+    position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+  }
+}
+
+.cis-tip-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin-block-end: 0.4rem;
+  padding-block-end: 0.35rem;
+  border-block-end: 1px solid var(--border);
+}
+
+.cis-tip p {
+  margin: 0 0 0.4rem;
+}
+
+.cis-tip p:last-child {
+  margin-block-end: 0;
+}
+
+.cis-tip-label {
+  font-weight: 700;
+  color: var(--brand);
 }
 
 .toolbar input[type="search"] {

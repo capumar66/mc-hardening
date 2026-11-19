@@ -108,6 +108,107 @@
     }
   });
 
+  /* ---- Interest-triggered toggletips (per interest-triggered-tooltips guide) ---- */
+  const ownedExpandedTriggers = new WeakSet();
+  const hasNativeInterestFor = "interestForElement" in HTMLButtonElement.prototype;
+
+  // Fallback for browsers where popover="hint" degrades to "manual" (e.g. Safari)
+  const hintProbe = document.createElement("div");
+  hintProbe.setAttribute("popover", "hint");
+  if (hintProbe.popover !== "hint") {
+    document.addEventListener(
+      "beforetoggle",
+      (ev) => {
+        const target = ev.target;
+        if (
+          ev.newState === "open" &&
+          target instanceof HTMLElement &&
+          target.getAttribute("popover") === "hint" &&
+          target.id &&
+          document.querySelector(`[popovertarget="${CSS.escape(target.id)}"]`)
+        ) {
+          target.setAttribute("popover", "auto");
+        }
+      },
+      true
+    );
+  }
+
+  // Keep aria-expanded in sync via capturing toggle listener (toggle does not bubble)
+  document.addEventListener(
+    "toggle",
+    (ev) => {
+      const target = ev.target;
+      if (!(target instanceof HTMLElement) || !target.id) return;
+      const isOpen = ev.newState === "open";
+      document
+        .querySelectorAll(`[interestfor="${CSS.escape(target.id)}"]`)
+        .forEach((trigger) => {
+          if (ownedExpandedTriggers.has(trigger)) {
+            trigger.setAttribute("aria-expanded", String(isOpen));
+          }
+          trigger.classList.toggle("interest-source", isOpen);
+        });
+    },
+    true
+  );
+
+  function wireHintTooltips(root) {
+    root.querySelectorAll("[interestfor]").forEach((trigger) => {
+      const targetId = trigger.getAttribute("interestfor");
+      if (!targetId) return;
+      const tip = document.getElementById(targetId);
+      if (!tip || !tip.hasAttribute("popover")) return;
+
+      if (!tip.hasAttribute("role")) {
+        tip.setAttribute("role", "tooltip");
+      }
+
+      if (trigger.hasAttribute("popovertarget") && !trigger.hasAttribute("aria-expanded")) {
+        ownedExpandedTriggers.add(trigger);
+        trigger.setAttribute("aria-expanded", String(tip.matches(":popover-open")));
+      }
+
+      // Lightweight hover/focus fallback when native interestfor is unavailable
+      if (!hasNativeInterestFor && !trigger.dataset.tipFallbackWired) {
+        trigger.dataset.tipFallbackWired = "1";
+        let hideTimer = null;
+
+        const openTip = () => {
+          clearTimeout(hideTimer);
+          if (typeof tip.showPopover === "function" && !tip.matches(":popover-open")) {
+            try {
+              tip.showPopover();
+            } catch {
+              // Ignore if already open or unsupported
+            }
+          }
+        };
+
+        const scheduleClose = () => {
+          clearTimeout(hideTimer);
+          hideTimer = setTimeout(() => {
+            if (typeof tip.hidePopover === "function" && tip.matches(":popover-open")) {
+              try {
+                tip.hidePopover();
+              } catch {
+                // Ignore
+              }
+            }
+          }, 180);
+        };
+
+        trigger.addEventListener("mouseenter", openTip);
+        trigger.addEventListener("focus", openTip);
+        trigger.addEventListener("mouseleave", scheduleClose);
+        trigger.addEventListener("blur", scheduleClose);
+        // WCAG 1.4.13 Hoverable: moving pointer onto the tooltip keeps it open
+        tip.addEventListener("mouseenter", () => clearTimeout(hideTimer));
+        tip.addEventListener("mouseleave", scheduleClose);
+      }
+    });
+  }
+
   /* ---- Navigation ---- */
   function switchView(viewName) {
     document.querySelectorAll(".nav-item").forEach((btn) => {
@@ -266,12 +367,56 @@
     }
 
     clearNode(tbody);
-    for (const item of filtered) {
+    filtered.forEach((item, idx) => {
       const tr = el("tr");
 
       const th = el("th");
       th.scope = "row";
-      th.appendChild(document.createTextNode(item.title));
+
+      const titleRow = el("div", "check-title-row");
+      titleRow.appendChild(el("span", null, item.title));
+
+      const expl = item.explanation || {};
+      if (expl.why || item.details) {
+        const tipId = `cis-tip-${idx}-${String(item.id || idx).replace(/[^a-zA-Z0-9_-]/g, "")}`;
+        const tipBtn = el("button", "tip-trigger", "?");
+        tipBtn.type = "button";
+        tipBtn.setAttribute("interestfor", tipId);
+        tipBtn.setAttribute("popovertarget", tipId);
+        tipBtn.setAttribute("popovertargetaction", "show");
+        tipBtn.setAttribute("aria-label", `Spiegazione dettagliata: ${item.title}`);
+        titleRow.appendChild(tipBtn);
+
+        const tipBox = el("div", "cis-tip");
+        tipBox.id = tipId;
+        tipBox.setAttribute("popover", "hint");
+
+        const tipHead = el("div", "cis-tip-title");
+        tipHead.appendChild(el("span", null, item.title));
+        if (item.benchmark) {
+          tipHead.appendChild(el("span", "pill pill-bench", item.benchmark));
+        }
+        tipBox.appendChild(tipHead);
+
+        if (expl.why) {
+          const pWhy = el("p");
+          pWhy.appendChild(el("span", "cis-tip-label", "Perché conta: "));
+          pWhy.appendChild(document.createTextNode(expl.why));
+          tipBox.appendChild(pWhy);
+        }
+        if (expl.impact) {
+          const pImp = el("p");
+          pImp.appendChild(el("span", "cis-tip-label", "Nota operativa: "));
+          pImp.appendChild(document.createTextNode(expl.impact));
+          tipBox.appendChild(pImp);
+        }
+        if (!expl.why && item.details) {
+          tipBox.appendChild(el("p", null, item.details));
+        }
+        titleRow.appendChild(tipBox);
+      }
+
+      th.appendChild(titleRow);
       th.appendChild(el("span", "check-cat", item.category));
       tr.appendChild(th);
 
@@ -321,7 +466,9 @@
 
       tr.appendChild(tdDet);
       tbody.appendChild(tr);
-    }
+    });
+
+    wireHintTooltips(tbody);
   }
 
   function renderLogs(logs) {
@@ -374,24 +521,51 @@
       }
     }
 
+    renderRecentEvents();
+  }
+
+  function renderRecentEvents() {
     const evBody = document.getElementById("events-tbody");
-    if (!logs.recent_events || logs.recent_events.length === 0) {
-      renderEmptyRow(evBody, 4, "Nessun evento recente.");
-    } else {
-      clearNode(evBody);
-      for (const ev of logs.recent_events) {
-        const tr = el("tr");
-        const th = el("th", null, ev.timestamp || "--");
-        th.scope = "row";
-        tr.appendChild(th);
-        const tdType = el("td");
-        const meta = EVENT_LABELS[ev.type] || { text: ev.type, cls: "pill-info" };
-        tdType.appendChild(el("span", `pill ${meta.cls}`, meta.text));
-        tr.appendChild(tdType);
-        tr.appendChild(el("td", null, ev.source || "--"));
-        tr.appendChild(el("td", null, ev.summary || ""));
-        evBody.appendChild(tr);
+    const countLabel = document.getElementById("events-count-label");
+    const allEvents = (currentReport && currentReport.logs && currentReport.logs.recent_events) || [];
+
+    const typeFilter = document.getElementById("filter-event-type").value;
+    const query = document.getElementById("filter-event-search").value.trim().toLowerCase();
+
+    const filtered = allEvents.filter((ev) => {
+      if (typeFilter !== "all" && ev.type !== typeFilter) return false;
+      if (query) {
+        const hay = `${ev.timestamp || ""} ${ev.type || ""} ${ev.source || ""} ${ev.summary || ""}`.toLowerCase();
+        if (!hay.includes(query)) return false;
       }
+      return true;
+    });
+
+    if (countLabel) {
+      countLabel.textContent =
+        filtered.length === allEvents.length
+          ? `${allEvents.length} eventi`
+          : `${filtered.length} di ${allEvents.length} eventi`;
+    }
+
+    if (filtered.length === 0) {
+      renderEmptyRow(evBody, 4, "Nessun evento corrisponde ai filtri selezionati.");
+      return;
+    }
+
+    clearNode(evBody);
+    for (const ev of filtered) {
+      const tr = el("tr");
+      const th = el("th", null, ev.timestamp || "--");
+      th.scope = "row";
+      tr.appendChild(th);
+      const tdType = el("td");
+      const meta = EVENT_LABELS[ev.type] || { text: ev.type, cls: "pill-info" };
+      tdType.appendChild(el("span", `pill ${meta.cls}`, meta.text));
+      tr.appendChild(tdType);
+      tr.appendChild(el("td", null, ev.source || "--"));
+      tr.appendChild(el("td", null, ev.summary || ""));
+      evBody.appendChild(tr);
     }
   }
 
@@ -593,6 +767,8 @@
     document.getElementById("filter-status").addEventListener("change", renderChecksTable);
     document.getElementById("filter-category").addEventListener("change", renderChecksTable);
     document.getElementById("filter-search").addEventListener("input", renderChecksTable);
+    document.getElementById("filter-event-type").addEventListener("change", renderRecentEvents);
+    document.getElementById("filter-event-search").addEventListener("input", renderRecentEvents);
 
     fetchAudit(false);
   });

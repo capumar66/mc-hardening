@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from .explanations import get_explanation
+
 
 @dataclass
 class CheckResult:
@@ -22,7 +24,9 @@ class CheckResult:
     remediation_cmd: str = ""  # Optional copyable shell command
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        data["explanation"] = get_explanation(self.id)
+        return data
 
 
 @dataclass
