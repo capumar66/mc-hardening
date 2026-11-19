@@ -499,10 +499,13 @@
     const btn = document.getElementById("btn-rescan");
     btn.disabled = true;
     btn.textContent = "Analisi…";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 25000);
     try {
       const resp = await fetch(fresh ? "/api/audit/run" : "/api/audit", {
         method: fresh ? "POST" : "GET",
         headers: getAuthHeaders(),
+        signal: controller.signal,
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: resp.statusText }));
@@ -514,8 +517,13 @@
     } catch (err) {
       const banner = document.getElementById("alert-banner");
       banner.hidden = false;
-      banner.textContent = `Errore caricamento report: ${err.message}`;
+      const msg =
+        err.name === "AbortError"
+          ? "Timeout scansione (25s): il server non ha risposto in tempo."
+          : err.message;
+      banner.textContent = `Errore caricamento report: ${msg}`;
     } finally {
+      clearTimeout(timer);
       btn.disabled = false;
       btn.textContent = "Nuova scansione";
     }

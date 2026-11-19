@@ -147,6 +147,17 @@ class TestHTTPServer(unittest.TestCase):
             hist = json.loads(resp.read().decode("utf-8"))
             self.assertGreaterEqual(len(hist["scans"]), 3)
 
+        post_req = Request(
+            f"{base}/api/audit/run",
+            data=b"",
+            method="POST",
+            headers={"X-Audit-Token": "secret-test-token"},
+        )
+        with urlopen(post_req) as resp:
+            self.assertEqual(resp.status, 200)
+            fresh = json.loads(resp.read().decode("utf-8"))
+            self.assertTrue(fresh["demo_mode"])
+
     def test_serves_index_html(self) -> None:
         base = f"http://127.0.0.1:{self.port}"
         with urlopen(f"{base}/") as resp:

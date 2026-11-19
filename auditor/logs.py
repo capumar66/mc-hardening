@@ -36,22 +36,29 @@ def _extract_timestamp(line: str) -> str:
     return m.group("ts") if m else ""
 
 
-def _read_tail_lines(path: Path, max_lines: int = 5000) -> list[str]:
-    """Read up to the last `max_lines` lines from a log file safely."""
-    with path.open("r", encoding="utf-8", errors="replace") as f:
-        lines = f.readlines()
+def _read_tail_lines(path: Path, max_lines: int = 5000, max_bytes: int = 2 * 1024 * 1024) -> list[str]:
+    """Read up to the last `max_lines` lines from a log file without loading huge files into RAM."""
+    file_size = path.stat().st_size
+    with path.open("rb") as f:
+        if file_size > max_bytes:
+            f.seek(file_size - max_bytes)
+            # Discard partial first line after seeking into the middle of the file
+            f.readline()
+        raw = f.read()
+    lines = raw.decode("utf-8", errors="replace").splitlines()
     return lines[-max_lines:]
 
 
-def _read_journal_ssh(max_lines: int = 3000) -> list[str]:
+def _read_journal_ssh(max_lines: int = 2000) -> list[str]:
     """Fallback to journalctl when /var/log/auth.log is absent or empty."""
     for unit in ("ssh", "sshd"):
         try:
             proc = subprocess.run(
                 ["journalctl", "-u", unit, "-n", str(max_lines), "--no-pager", "-o", "short-iso"],
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
-                timeout=8,
+                timeout=5,
                 check=False,
             )
             if proc.returncode == 0 and proc.stdout.strip():

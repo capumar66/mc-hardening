@@ -14,6 +14,7 @@ import hmac
 import json
 from pathlib import Path
 import threading
+import time
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -45,24 +46,27 @@ class AuditState:
         self.auth_token = auth_token
         self.history = HistoryStore(db_path=db_path)
         self._lock = threading.Lock()
+        self._scan_lock = threading.Lock()
         self._latest: dict[str, Any] | None = None
         if self.demo_mode:
             seed_demo_history(self.history)
 
     def get_or_run(self) -> dict[str, Any]:
         with self._lock:
-            if self._latest is None:
-                report = self._execute()
-                self.history.save_scan(report)
-                self._latest = report
-            return self._latest
+            if self._latest is not None:
+                return self._latest
+        return self.run_fresh()
 
     def run_fresh(self) -> dict[str, Any]:
-        report = self._execute()
-        self.history.save_scan(report)
-        with self._lock:
-            self._latest = report
-        return report
+        with self._scan_lock:
+            t0 = time.monotonic()
+            report = self._execute()
+            elapsed = time.monotonic() - t0
+            print(f"[audit] scansione completata in {elapsed:.2f}s (score={report.get('score')})")
+            self.history.save_scan(report)
+            with self._lock:
+                self._latest = report
+            return report
 
     def list_history(self) -> list[dict[str, Any]]:
         return self.history.list_scans(limit=30, demo_only=self.demo_mode)
@@ -181,11 +185,25 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         query = parse_qs(parsed.query)
 
+        # Drain any request body cleanly so clients never stall on unread bytes
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            content_length = 0
+        if content_length > 0:
+            self.rfile.read(min(content_length, 65536))
+
         if parsed.path == "/api/audit/run":
             if not self._check_auth(query):
                 self._send_json({"error": "Token non valido o mancante"}, status=HTTPStatus.UNAUTHORIZED)
                 return
-            self._send_json(self.server.state.run_fresh())
+            try:
+                self._send_json(self.server.state.run_fresh())
+            except Exception as exc:  # noqa: BLE001
+                self._send_json(
+                    {"error": f"Errore durante la scansione: {exc}"},
+                    status=HTTPStatus.INTERNAL_SERVER_ERROR,
+                )
             return
 
         self._send_json({"error": "Endpoint non trovato"}, status=HTTPStatus.NOT_FOUND)

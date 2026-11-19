@@ -17,11 +17,12 @@ from .logs import analyze_system_logs
 from .models import AuditReport, CheckResult, ListeningPort, compute_score
 
 
-def _run_cmd(cmd: list[str], timeout: int = 6) -> tuple[int, str, str]:
-    """Run a local read-only command safely."""
+def _run_cmd(cmd: list[str], timeout: int = 5) -> tuple[int, str, str]:
+    """Run a local read-only command safely without blocking on stdin."""
     try:
         proc = subprocess.run(
             cmd,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -503,7 +504,7 @@ def check_apt_and_reboot() -> list[CheckResult]:
     # Check pending updates via Ubuntu's apt-check (fast, read-only)
     apt_check = Path("/usr/lib/update-notifier/apt-check")
     if apt_check.exists():
-        rc, out, err = _run_cmd([str(apt_check)], timeout=8)
+        rc, out, err = _run_cmd([str(apt_check)], timeout=5)
         raw = (err or out).strip()
         if rc == 0 and ";" in raw:
             parts = raw.split(";", 1)
